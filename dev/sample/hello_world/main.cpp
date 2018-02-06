@@ -4,6 +4,11 @@
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#define BOOST_THREAD_VERSION 4
+#define BOOST_THREAD_PROVIDES_EXECUTORS
+#include <boost/thread/future.hpp>
+#include <boost/thread/executors/basic_thread_pool.hpp>
+#include <fstream>
 
 template < typename RESP >
 RESP
@@ -16,11 +21,34 @@ init_resp( RESP resp )
 };
 
 using router_t = restinio::router::express_router_t<>;
+boost::basic_thread_pool pool{std::thread::hardware_concurrency()};
 
 auto create_request_handler()
 {
 	auto router = std::make_unique< router_t >();
 
+    router->http_get(
+            "/future",
+            [](auto req, auto) {
+                boost::future<std::string> f1 = boost::async(pool, []() {
+					std::ifstream is("index.html", std::ios::in | std::ios::binary);
+					std::string result;
+					char buf[512];
+					while (is.read(buf, sizeof(buf)).gcount() > 0)
+						result.append(buf, is.gcount());
+					return result;
+                });
+                f1.then(pool, [req](auto f) {
+                    auto r = f.get();
+                    init_resp( req->create_response() )
+                            .append_header( restinio::http_field::content_type, "text/html; charset=utf-8" )
+                            .set_body(r)
+                            .done();
+                });
+
+                return restinio::request_accepted();
+            }
+    );
 	router->http_get(
 		"/",
 		[]( auto req, auto ){
@@ -72,11 +100,11 @@ int main()
 		using traits_t =
 			restinio::traits_t<
 				restinio::asio_timer_manager_t,
-				restinio::single_threaded_ostream_logger_t,
+				restinio::null_logger_t,
 				router_t >;
 
 		restinio::run(
-			restinio::on_this_thread<traits_t>()
+			restinio::on_thread_pool<traits_t>( std::thread::hardware_concurrency() )
 				.port( 8080 )
 				.address( "localhost" )
 				.request_handler( create_request_handler() ) );

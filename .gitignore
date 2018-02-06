@@ -17,6 +17,8 @@ dev/json_dto
 dev/args
 dev/catch
 dev/cmake_build*
+dev/cmake-build*
+dev/.idea
 o/*
 ./wiki
 *.sublime-project

@@ -56,8 +56,12 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
+set(OPENSSL_ROOT_DIR /usr/local/opt/openssl)
+set(OPENSSL_INCLUDE_DIR /usr/local/opt/openssl/include)
+set(OPENSSL_LIBRARIES /usr/local/opt/openssl/lib/libssl.dylib /usr/local/opt/openssl/lib/libcrypto.dylib)
+set(OPENSSL_FOUND true)
 
-find_package(OpenSSL)
+#find_package(OpenSSL)
 find_package(PCRE)
 find_package(PCRE2)
 IF(PCRE2_FOUND)
